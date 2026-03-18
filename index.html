@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heart Disease & Health Determinants – County Explorer</title>
+<script src="https://unpkg.com/maplibre-gl@4.1.1/dist/maplibre-gl.js"></script>
+<link href="https://unpkg.com/maplibre-gl@4.1.1/dist/maplibre-gl.css" rel="stylesheet">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;600&display=swap');
+  :root{--bg:#f5f0e8;--surface:#ede8dd;--surface2:#e2ddd2;--border:#c4bfb4;--text:#1a1a1a;--text2:#555;--accent:#2563eb;--accent2:#16a34a;--warn:#d97706;--danger:#dc2626}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:grid;grid-template-columns:390px 1fr}
+  #sidebar{background:var(--surface);border-right:2px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;height:100vh}
+  #sidebar::-webkit-scrollbar{width:5px} #sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  .sidebar-header{padding:18px 20px 14px;border-bottom:2px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:2}
+  .sidebar-header h1{font-size:18px;font-weight:700;letter-spacing:-.3px;margin-bottom:3px;color:#111}
+  .sidebar-header p{font-size:13px;color:var(--text2);line-height:1.4}
+  .section{padding:14px 20px;border-bottom:1px solid var(--border)}
+  .section-group-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#fff;background:var(--accent);padding:8px 20px;margin:0 -20px;margin-bottom:10px;margin-top:-14px}
+  .section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:8px}
+  label{display:block;font-size:13px;color:var(--text2);margin-bottom:3px;font-weight:600}
+  select,input[type="number"],input[type="text"]{width:100%;background:#fff;border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:8px 10px;margin-bottom:7px;outline:none;transition:border-color .15s}
+  select:focus,input:focus{border-color:var(--accent)}
+  .row{display:flex;gap:8px} .row>div{flex:1}
+  .tab-bar{display:flex;gap:3px;margin-bottom:8px;flex-wrap:wrap}
+  .tab{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--text2);cursor:pointer;transition:all .15s;text-align:center}
+  .tab:hover{border-color:var(--accent);color:var(--accent)}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;margin-bottom:6px}
+  .toggle-row label{margin-bottom:0;font-size:14px}
+  .toggle-switch{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0}
+  .toggle-switch input{position:absolute;width:100%;height:100%;opacity:0;margin:0;cursor:pointer;z-index:1}
+  .toggle-slider{position:absolute;inset:0;background:var(--surface2);border:1px solid var(--border);border-radius:20px;cursor:pointer;transition:.2s}
+  .toggle-slider::before{content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;background:var(--text2);border-radius:50%;transition:.2s}
+  .toggle-switch input:checked+.toggle-slider{background:var(--accent);border-color:var(--accent)}
+  .toggle-switch input:checked+.toggle-slider::before{transform:translateX(18px);background:#fff}
+  .color-stops{display:flex;flex-direction:column;gap:4px;margin-bottom:5px}
+  .color-stop-row{display:flex;align-items:center;gap:5px}
+  .color-stop-row input[type="color"]{width:30px;height:30px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;padding:2px;flex-shrink:0}
+  .color-stop-row .stop-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);width:16px;flex-shrink:0;text-align:center}
+  .btn-remove-stop{background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:3px;border-radius:4px;flex-shrink:0}
+  .btn-remove-stop:hover{color:var(--danger);background:rgba(220,38,38,.1)}
+  .btn-row{display:flex;gap:6px;margin-top:4px}
+  button{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;transition:all .15s}
+  .btn-secondary{background:#fff;color:var(--text);border:1px solid var(--border)}
+  .btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-export{background:var(--accent2);color:#fff;width:100%;padding:11px;font-size:14px;font-weight:700}
+  .btn-export:hover{filter:brightness(1.1)}
+  .preset-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+  .chip{font-family:'DM Sans',sans-serif;font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:#fff;color:var(--text2);cursor:pointer;transition:all .15s}
+  .chip:hover,.chip.active{border-color:var(--accent);color:#fff;background:var(--accent)}
+  input[type="range"]{-webkit-appearance:none;width:100%;height:5px;background:var(--border);border-radius:3px;outline:none;margin:6px 0 7px}
+  input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer}
+  .range-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+  .stat-row{display:flex;gap:6px;margin-bottom:6px}
+  .stat-card{flex:1;background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 8px;text-align:center}
+  .stat-card .sv{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--accent)}
+  .stat-card .sl{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+  #county-search{width:100%;background:#fff;border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:8px 10px;outline:none;margin-bottom:4px}
+  #county-search:focus{border-color:var(--accent)}
+  #search-results{max-height:100px;overflow-y:auto;border-radius:6px}
+  .search-item{padding:6px 10px;font-size:13px;cursor:pointer;border-radius:4px;transition:background .1s}
+  .search-item:hover{background:var(--surface2);color:var(--accent)}
+  #map-container{position:relative;height:100vh}
+  #map{width:100%;height:100%}
+  .maplibregl-popup-content{background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:8px!important;padding:12px 14px!important;font-family:'DM Sans',sans-serif!important;font-size:12px!important;box-shadow:0 8px 30px rgba(0,0,0,.5)!important;max-width:280px!important}
+  .maplibregl-popup-tip{border-top-color:var(--surface)!important}
+  .popup-title{font-weight:700;font-size:13px;margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+  .popup-row{display:flex;justify-content:space-between;padding:2px 0}
+  .popup-label{color:var(--text2)} .popup-val{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12px}
+  .popup-section-title{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin-top:5px;margin-bottom:2px;font-weight:700}
+  #legend,#bivariate-legend,#analysis-legend{position:absolute;bottom:32px;right:16px;border:1px solid var(--border);border-radius:8px;padding:12px 14px;z-index:5}
+  #legend-title,.analysis-legend-title{font-size:11px;font-weight:700;margin-bottom:6px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+  #legend-bar{height:12px;border-radius:3px;margin-bottom:4px}
+  #legend-labels{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text2)}
+  .legend-nodata{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--text2)}
+  .legend-nodata-swatch{width:14px;height:14px;border-radius:3px;border:1px solid var(--border)}
+  #bivariate-legend{display:none}
+  #biv-grid{display:grid;grid-template-columns:repeat(3,24px);grid-template-rows:repeat(3,24px);gap:1px;margin:6px auto}
+  #biv-grid div{border-radius:2px}
+  .biv-axis-label{font-size:9px;color:var(--text2);text-align:center;margin-top:3px}
+  .biv-y-label{font-size:9px;color:var(--text2);writing-mode:vertical-rl;transform:rotate(180deg)}
+  #analysis-legend{display:none}
+  .analysis-legend-items{display:flex;flex-direction:column;gap:3px}
+  .analysis-legend-item{display:flex;align-items:center;gap:6px;font-size:11px}
+  .analysis-legend-swatch{width:16px;height:12px;border-radius:2px;flex-shrink:0}
+  #stats-panel{position:absolute;top:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;z-index:6;display:none;width:340px}
+  .stats-panel-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .stats-panel-close{position:absolute;top:6px;right:10px;background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer;padding:4px}
+  .stats-panel-close:hover{color:var(--danger)}
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+  .stats-cell{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 6px;text-align:center}
+  .stats-cell .sv{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent)}
+  .stats-cell .sl{font-size:8px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
+  .stats-equation{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--warn);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:5px 8px;margin-bottom:8px;text-align:center;word-break:break-all}
+  #stats-scatter{width:100%;border-radius:4px}
+  #chart-overlay{position:absolute;top:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;z-index:7;display:none;width:380px}
+  #chart-overlay canvas{width:100%;border-radius:4px}
+  .chart-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .chart-close,.stats-panel-close{position:absolute;top:8px;right:12px;background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer;padding:4px}
+  .chart-close:hover{color:var(--danger)}
+  .inset-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:6;display:none;pointer-events:none}
+  .inset-container.active{display:block}
+  .inset-box{position:absolute;background:transparent;border:none;border-radius:4px;overflow:hidden;pointer-events:auto}
+  .inset-box .inset-label{position:absolute;bottom:3px;left:6px;font-size:11px;font-weight:700;color:#333;z-index:3;text-shadow:0 0 4px rgba(255,255,255,.9);pointer-events:none}
+  .inset-drag{position:absolute;top:0;left:0;right:0;height:20px;cursor:grab;z-index:4;background:transparent}
+  .inset-drag:active{cursor:grabbing}
+  .inset-map{width:100%;height:100%}
+  /* map title overlay */
+  #map-title{position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:5;text-align:center;pointer-events:none;display:none}
+  #map-title .mt-main{font-family:'DM Sans',serif;font-weight:700;color:#111;line-height:1.2}
+  #map-title .mt-sub{font-family:'DM Sans',sans-serif;font-weight:400;color:#444;line-height:1.3;margin-top:2px}
+  #loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--text2);font-size:13px;z-index:10}
+  .spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="sidebar-header">
+    <h1>County Health Explorer</h1>
+    <p>2,906 counties &middot; 50 variables &middot; Regression &amp; spatial analysis</p>
+  </div>
+
+  <!-- ====== DATA & EXPLORATION ====== -->
+  <div class="section">
+    <div class="section-group-title">Data &amp; Exploration</div>
+    <label id="lbl-var-x">Primary Variable</label>
+    <select id="sel-variable"></select>
+    <div class="toggle-row">
+      <label>Compare Two Variables</label>
+      <div class="toggle-switch"><input type="checkbox" id="secondary-toggle"><span class="toggle-slider"></span></div>
+    </div>
+    <div id="secondary-wrap" class="hidden">
+      <label id="lbl-var-y">Secondary Variable</label>
+      <select id="sel-variable-y"></select>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">View Mode</div>
+    <div class="tab-bar" id="mode-tabs"></div>
+    <div id="mode-desc" style="font-size:12px;color:var(--text2);line-height:1.4;"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Summary Statistics</div>
+    <div class="stat-row">
+      <div class="stat-card"><div class="sv" id="stat-mean">&mdash;</div><div class="sl">Mean</div></div>
+      <div class="stat-card"><div class="sv" id="stat-median">&mdash;</div><div class="sl">Median</div></div>
+      <div class="stat-card"><div class="sv" id="stat-sd">&mdash;</div><div class="sl">Std Dev</div></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Search County</div>
+    <input type="text" id="county-search" placeholder="Type county name&hellip;">
+    <div id="search-results"></div>
+  </div>
+  <div class="section">
+    <div class="btn-row">
+      <button class="btn-secondary" id="btn-histogram" style="flex:1;">Histogram</button>
+      <button class="btn-secondary" id="btn-scatter" style="flex:1;">Scatter Plot</button>
+    </div>
+  </div>
+
+  <!-- ====== STYLING ====== -->
+  <div class="section" id="ramp-section">
+    <div class="section-group-title">Styling</div>
+    <div class="section-title">Color Ramp Presets</div>
+    <div class="preset-chips" id="preset-chips"></div>
+    <label>Custom Stops</label>
+    <div id="color-stops" class="color-stops"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="btn-add-stop">+ Stop</button>
+      <button class="btn-secondary" id="btn-reverse">Reverse</button>
+    </div>
+  </div>
+  <div class="section" id="class-section">
+    <div class="section-title">Classification</div>
+    <div class="row"><div><label>Method</label><select id="sel-method">
+      <option value="quantile" selected>Quantile</option><option value="equal">Equal Interval</option>
+      <option value="jenks">Natural Breaks</option><option value="manual">Manual</option>
+    </select></div><div><label>Classes</label><input type="number" id="num-classes" value="6" min="3" max="12"></div></div>
+    <div id="manual-breaks-wrap" class="hidden"><label>Breaks (comma-sep)</label><input type="text" id="manual-breaks" placeholder="100, 200, 300"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Fill &amp; Borders</div>
+    <label>Fill Opacity</label>
+    <input type="range" id="opacity-slider" min="0" max="1" step="0.05" value="0.85">
+    <div class="range-labels"><span>0</span><span id="opacity-val">0.85</span><span>1</span></div>
+    <div class="row" style="margin-top:4px;">
+      <div><label>County Border</label><input type="color" id="stroke-color" value="#2d333b" style="width:100%;height:30px;"></div>
+      <div><label>Border Width</label><input type="number" id="stroke-width" value="0.4" min="0" max="3" step="0.1"></div>
+      <div><label>No-Data Color</label><input type="color" id="nodata-color" value="#3a3a3a" style="width:100%;height:30px;"></div>
+    </div>
+    <div class="toggle-row" style="margin-top:6px;">
+      <label>State Boundaries</label>
+      <div class="toggle-switch"><input type="checkbox" id="state-borders-toggle" checked><span class="toggle-slider"></span></div>
+    </div>
+    <div id="state-border-opts">
+      <div class="row">
+        <div><label>State Color</label><input type="color" id="state-stroke-color" value="#aaaaaa" style="width:100%;height:30px;"></div>
+        <div><label>State Width</label><input type="number" id="state-stroke-width" value="1" min="0" max="5" step="0.5"></div>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Map Title</div>
+    <label>Title (line 1)</label>
+    <input type="text" id="map-title-input" placeholder="e.g. Figure 1. Heart Disease Mortality by County">
+    <label>Subtitle (line 2)</label>
+    <input type="text" id="map-subtitle-input" placeholder="e.g. Age-adjusted rate per 100,000, 2024">
+    <div class="row">
+      <div><label>Title Size</label><input type="number" id="map-title-size" value="20" min="10" max="40" step="1"></div>
+      <div><label>Subtitle Size</label><input type="number" id="map-subtitle-size" value="14" min="8" max="30" step="1"></div>
+      <div><label>Title Color</label><input type="color" id="map-title-color" value="#111111" style="width:100%;height:30px;"></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Legend</div>
+    <div class="row">
+      <div><label>Legend Title</label><input type="text" id="legend-title-input" placeholder="Auto from variable"></div>
+    </div>
+    <div class="row">
+      <div><label>Background</label><input type="color" id="legend-bg" value="#161b22" style="width:100%;height:30px;"></div>
+      <div><label>Text Color</label><input type="color" id="legend-text-color" value="#e6edf3" style="width:100%;height:30px;"></div>
+    </div>
+    <div class="row">
+      <div><label>Font Size</label><input type="number" id="legend-fontsize" value="11" min="8" max="20" step="1"></div>
+      <div><label>Width</label><input type="number" id="legend-width" value="220" min="120" max="400" step="10"></div>
+    </div>
+  </div>
+
+  <!-- ====== COMPOSITION ====== -->
+  <div class="section">
+    <div class="section-group-title">Composition</div>
+    <div class="section-title">Basemap</div>
+    <div class="row">
+      <div><select id="sel-basemap">
+        <option value="none" selected>None (color only)</option>
+        <option value="dark">Dark</option><option value="light">Light</option>
+        <option value="positron">Positron</option>
+      </select></div>
+      <div><label>Background</label><input type="color" id="bg-color" value="#ffffff" style="width:100%;height:30px;"></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Extent</div>
+    <div class="toggle-row">
+      <label>Show Full US (incl. AK/HI on map)</label>
+      <div class="toggle-switch"><input type="checkbox" id="pub-toggle"><span class="toggle-slider"></span></div>
+    </div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:6px;">Default: Lower-48 with AK &amp; HI in draggable inset boxes. Toggle ON to show all states on the main map.</p>
+    <div id="pub-opts">
+      <label style="font-weight:700;color:var(--text);font-size:13px;">Alaska Inset</label>
+      <div class="row">
+        <div><label>Width</label><input type="number" id="ak-w" value="380" min="60" max="600" step="10"></div>
+        <div><label>Height</label><input type="number" id="ak-h" value="300" min="40" max="500" step="10"></div>
+        <div><label>Zoom</label><input type="number" id="ak-zoom" value="2.4" min="0.5" max="8" step="0.1"></div>
+      </div>
+      <label style="font-weight:700;color:var(--text);font-size:13px;margin-top:4px;">Hawaii Inset</label>
+      <div class="row">
+        <div><label>Width</label><input type="number" id="hi-w" value="210" min="60" max="600" step="10"></div>
+        <div><label>Height</label><input type="number" id="hi-h" value="160" min="40" max="500" step="10"></div>
+        <div><label>Zoom</label><input type="number" id="hi-zoom" value="4.5" min="1" max="10" step="0.1"></div>
+      </div>
+      <label style="font-weight:700;color:var(--text);font-size:13px;margin-top:4px;">Inset Style</label>
+      <div class="toggle-row">
+        <label>Show Box Border</label>
+        <div class="toggle-switch"><input type="checkbox" id="inset-border-toggle" checked><span class="toggle-slider"></span></div>
+      </div>
+      <div id="inset-border-opts">
+        <div class="row">
+          <div><label>Border Color</label><input type="color" id="inset-border-color" value="#999999" style="width:100%;height:30px;"></div>
+          <div><label>Border Width</label><input type="number" id="inset-border-width" value="2" min="0.5" max="6" step="0.5"></div>
+        </div>
+      </div>
+      <div class="toggle-row" style="margin-top:4px;">
+        <label>Show Box Background</label>
+        <div class="toggle-switch"><input type="checkbox" id="inset-bg-toggle" checked><span class="toggle-slider"></span></div>
+      </div>
+      <div id="inset-bg-opts">
+        <div class="row">
+          <div><label>Background Color</label><input type="color" id="inset-bg" value="#ffffff" style="width:100%;height:30px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== EXPORT ====== -->
+  <div class="section" style="border-bottom:none;">
+    <button class="btn-export" id="btn-export">Export Map as PNG</button>
+  </div>
+</div>
+
+<!-- MAP -->
+<div id="map-container">
+  <div id="loading"><div class="spinner"></div>Loading county data&hellip;</div>
+  <div id="map"></div>
+  <div id="map-title"><div class="mt-main" id="mt-main"></div><div class="mt-sub" id="mt-sub"></div></div>
+  <div id="legend"><div id="legend-title"></div><div id="legend-bar"></div><div id="legend-labels"><span id="leg-min"></span><span id="leg-max"></span></div><div class="legend-nodata"><div class="legend-nodata-swatch" id="legend-nd"></div><span>No data</span></div></div>
+  <div id="bivariate-legend"><div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Bivariate</div><div style="display:flex;align-items:center;gap:6px;"><span class="biv-y-label" id="biv-y-label">Y</span><div><div id="biv-grid"></div><div class="biv-axis-label" id="biv-x-label">X</div></div></div><div class="legend-nodata" style="margin-top:6px;"><div class="legend-nodata-swatch" id="biv-nd"></div><span>No data</span></div></div>
+  <div id="analysis-legend"><div class="analysis-legend-title" id="al-title"></div><div class="analysis-legend-items" id="al-items"></div><div class="legend-nodata" style="margin-top:6px;"><div class="legend-nodata-swatch" id="al-nd"></div><span>No data</span></div></div>
+  <div id="stats-panel"><button class="stats-panel-close" id="sp-close">&times;</button><div class="stats-panel-title" id="sp-title">OLS Regression</div><div class="stats-grid" id="sp-grid"></div><div class="stats-equation" id="sp-eq"></div><canvas id="stats-scatter" width="308" height="200"></canvas></div>
+  <div id="chart-overlay"><button class="chart-close" id="chart-close">&times;</button><div class="chart-title" id="chart-title"></div><canvas id="chart-canvas" width="348" height="220"></canvas></div>
+  <div class="inset-container" id="inset-container">
+    <div class="inset-box" id="inset-ak-box" style="width:380px;height:300px;bottom:16px;left:16px;"><div class="inset-drag" id="drag-ak"></div><div class="inset-label">Alaska</div><div class="inset-map" id="inset-ak"></div></div>
+    <div class="inset-box" id="inset-hi-box" style="width:210px;height:160px;bottom:16px;left:410px;"><div class="inset-drag" id="drag-hi"></div><div class="inset-label">Hawaii</div><div class="inset-map" id="inset-hi"></div></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// VARIABLES
+// ═══════════════════════════════════════════
+const VAR_GROUPS = {
+  'Heart Disease & Mortality':{HD_DeathRate:'HD Death Rate (per 100K)',Premature_Death_Rate:'Premature Death (YPLL/100K)',Age_Adj_Mortality:'Age-Adj Mortality (per 100K)',Life_Expectancy:'Life Expectancy (yr)',Drug_Overdose_Rate:'Drug Overdose Deaths (per 100K)',Suicide_Rate:'Suicide Rate (per 100K)'},
+  'Health Status':{Poor_Fair_Health_Pct:'Poor/Fair Health (%)',Poor_Phys_Health_Days:'Poor Phys Health Days',Poor_Mental_Health_Days:'Poor Mental Health Days',Diabetes_Prevalence:'Diabetes Prevalence (%)'},
+  'Health Behaviors':{Adult_Smoking_Pct:'Adult Smoking (%)',Adult_Obesity_Pct:'Adult Obesity (%)',Physical_Inactivity_Pct:'Physical Inactivity (%)',Excessive_Drinking_Pct:'Excessive Drinking (%)'},
+  'Clinical Care':{Dentists_per_100K:'Dentists per 100K',PCP_Rate:'PCP Ratio',MHP_Rate:'MH Providers (ratio)',Preventable_Hosp_Rate:'Preventable Hosp (per 100K)',Flu_Vax_Pct:'Flu Vaccination (%)',Uninsured_pct:'Uninsured (%)',Uninsured_Adults_Pct:'Uninsured Adults (%)',Uninsured_Children_Pct:'Uninsured Children (%)'},
+  'Socioeconomic':{Median_HH_Income:'Median HH Income ($)',Child_Poverty_Pct:'Child Poverty (%)',Income_Inequality:'Income Inequality',Unemployment_Pct:'Unemployment (%)',HS_Graduation_Pct:'HS Graduation (%)',Some_College_Pct:'Some College (%)',Single_Parent_Pct:'Single Parent HH (%)',Social_Assoc_Rate:'Social Assoc (per 10K)'},
+  'Environment & Demographics':{Food_Insecurity_Pct:'Food Insecurity (%)',Limited_Food_Access_Pct:'Limited Food Access (%)',Air_Pollution_PM:'Air Pollution PM2.5',Severe_Housing_Pct:'Severe Housing (%)',Broadband_Pct:'Broadband Access (%)',Pct_Rural:'Rural (%)',Pct_Under_18:'Under 18 (%)',Pct_65_Plus:'65+ (%)',Pct_White:'Non-Hisp White (%)',Pct_Black:'Non-Hisp Black (%)',Pct_Hispanic:'Hispanic (%)'},
+  'Population':{Population:'Population',Deaths:'Total HD Deaths',CHR_Population:'CHR Population'},
+};
+const VL = {}; Object.values(VAR_GROUPS).forEach(g=>Object.assign(VL,g));
+const shortLabel = k => (VL[k]||k).split('(')[0].trim();
+
+const SINGLE_MODES = [
+  {id:'choropleth',label:'Choropleth',desc:'Single variable color ramp.'},
+  {id:'bubble',label:'Bubble',desc:'Proportional circles sized by value.'},
+  {id:'hotspot',label:'Hot Spots',desc:'Getis-Ord Gi* spatial clusters (red=hot, blue=cold).'},
+];
+const DUAL_MODES = [
+  {id:'bivariate',label:'Bivariate',desc:'3&times;3 color grid showing both variables.'},
+  {id:'residuals',label:'Residuals',desc:'OLS regression residuals. Red = higher than predicted, blue = lower.'},
+  {id:'rate_ratio',label:'Rate Ratio',desc:'Ratio of primary / secondary variable (log-scaled diverging).'},
+  {id:'pct_diff',label:'Percentile Diff',desc:'Difference in percentile ranks between the two variables.'},
+];
+
+// ═══════════════════════════════════════════
+// DATA & STATE
+// ═══════════════════════════════════════════
+let countyData={}, allRecords=[], mapReady=false, map;
+let geojsonData=null, topoData=null, centroidIndex=[], neighborCache={}, analysisValues={};
+let lastOLS = null;
+
+const RAMPS = {
+  YlOrRd:['#ffffb2','#fed976','#feb24c','#fd8d3c','#fc4e2a','#e31a1c','#b10026'],
+  Viridis:['#440154','#443983','#31688e','#21918c','#35b779','#90d743','#fde725'],
+  Inferno:['#000004','#420a68','#932667','#dd513a','#fca50a','#fcffa4'],
+  RdYlBu:['#d73027','#fc8d59','#fee090','#ffffbf','#e0f3f8','#91bfdb','#4575b4'],
+  Blues:['#f7fbff','#c6dbef','#6baed6','#2171b5','#08306b'],
+  Spectral:['#d53e4f','#fc8d59','#fee08b','#ffffbf','#e6f598','#99d594','#3288bd'],
+  Magma:['#000004','#3b0f70','#8c2981','#de4968','#fe9f6d','#fcfdbf'],
+  PuBuGn:['#fff7fb','#d0d1e6','#67a9cf','#1c9099','#016c59'],
+  Greens:['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b'],
+  PuRd:['#f1eef6','#d4b9da','#c994c7','#df65b0','#dd1c77','#980043'],
+};
+const BIV_COLORS=[['#e8e8e8','#ace4e4','#5ac8c8'],['#dfb0d6','#a5add3','#5698b9'],['#be64ac','#8c62aa','#3b4994']];
+const RC={neg2:'#08519c',neg1:'#6baed6',zero:'#f0f0f0',pos1:'#fb6a4a',pos2:'#a50f15'};
+const HC={cold3:'#08306b',cold2:'#2171b5',cold1:'#6baed6',ns:'#d9d9d9',hot1:'#fb6a4a',hot2:'#de2d26',hot3:'#a50f15'};
+
+// Raster tile basemaps — no vector styles, no setStyle(), no layer ordering issues
+const BASEMAP_TILES={
+  dark:'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+  light:'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+  positron:'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
+  none:null,
+};
+// One blank style used for the entire lifetime of the map — never changes
+function blankStyle(bg){return{version:8,name:'blank',sources:{},layers:[{id:'background',type:'background',paint:{'background-color':bg}}]};}
+
+let S = {
+  mode:'choropleth', variable:'HD_DeathRate', variableY:'Dentists_per_100K',
+  secondaryOn:false,
+  rampName:'YlOrRd', colors:[...RAMPS.YlOrRd],
+  method:'quantile', nClasses:6, manualBreaks:[],
+  opacity:0.85, strokeColor:'#2d333b', strokeWidth:0.4,
+  noDataColor:'#3a3a3a', basemap:'none', bgColor:'#ffffff', fullExtent:false,
+  stateBorders:true, stateBorderColor:'#aaaaaa', stateBorderWidth:1,
+  // Inset settings
+  akW:380, akH:300, akZoom:2.4, akCenter:[-153,64],
+  hiW:210, hiH:160, hiZoom:4.5, hiCenter:[-157,20.5],
+  insetBorder:'#999999', insetBorderWidth:2, insetShowBorder:true,
+  insetBg:'#ffffff', insetShowBg:true,
+  // Legend settings
+  legendTitle:'', legendBg:'#161b22', legendTextColor:'#e6edf3', legendFontSize:11, legendWidth:220,
+  mapTitle:'', mapSubtitle:'', mapTitleSize:20, mapSubtitleSize:14, mapTitleColor:'#111111',
+};
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+async function init(){
+  const r=await fetch('map_data.json'); allRecords=await r.json();
+  allRecords.forEach(r=>{countyData[r.FIPS]=r;});
+  document.documentElement.style.setProperty('--pub-bg',S.bgColor);
+  buildSelects(); buildPresetChips(); renderColorStops(); renderModeTabs();
+  initMap(); bindControls(); updateStats();
+}
+
+function buildSelects(){
+  ['sel-variable','sel-variable-y'].forEach(id=>{
+    const sel=document.getElementById(id); sel.innerHTML='';
+    Object.entries(VAR_GROUPS).forEach(([g,vars])=>{
+      const og=document.createElement('optgroup'); og.label=g;
+      Object.entries(vars).forEach(([k,v])=>{const o=document.createElement('option');o.value=k;o.textContent=v;og.appendChild(o);});
+      sel.appendChild(og);
+    });
+  });
+  document.getElementById('sel-variable').value=S.variable;
+  document.getElementById('sel-variable-y').value=S.variableY;
+}
+
+function renderModeTabs(){
+  const modes=S.secondaryOn?DUAL_MODES:SINGLE_MODES;
+  const bar=document.getElementById('mode-tabs'); bar.innerHTML='';
+  if(!modes.find(m=>m.id===S.mode)) S.mode=modes[0].id;
+  modes.forEach(m=>{
+    const t=document.createElement('div'); t.className='tab'+(m.id===S.mode?' active':'');
+    t.textContent=m.label; t.dataset.mode=m.id;
+    t.onclick=()=>{
+      S.mode=m.id; bar.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active');
+      updateModeUI(); updateMap();
+    };
+    bar.appendChild(t);
+  });
+  updateModeUI();
+}
+
+function updateModeUI(){
+  const modes=S.secondaryOn?DUAL_MODES:SINGLE_MODES;
+  const m=modes.find(x=>x.id===S.mode)||modes[0];
+  document.getElementById('mode-desc').innerHTML=m.desc;
+  // Labels
+  if(S.secondaryOn&&S.mode==='residuals'){
+    document.getElementById('lbl-var-x').textContent='Y (Outcome)';
+    document.getElementById('lbl-var-y').textContent='X (Predictor)';
+  } else if(S.secondaryOn){
+    document.getElementById('lbl-var-x').textContent='Primary Variable';
+    document.getElementById('lbl-var-y').textContent='Secondary Variable';
+  } else {
+    document.getElementById('lbl-var-x').textContent='Variable';
+  }
+  // Show/hide ramp & classification for analysis modes
+  const isAnalysis=['residuals','hotspot','rate_ratio','pct_diff'].includes(S.mode);
+  document.getElementById('ramp-section').classList.toggle('hidden',isAnalysis||S.mode==='bivariate');
+  document.getElementById('class-section').classList.toggle('hidden',isAnalysis||S.mode==='bivariate');
+  if(!isAnalysis){clearAnalysisValues(); document.getElementById('stats-panel').style.display='none';}
+}
+
+function buildPresetChips(){
+  const w=document.getElementById('preset-chips'); w.innerHTML='';
+  Object.keys(RAMPS).forEach(name=>{
+    const c=document.createElement('div'); c.className='chip'+(name===S.rampName?' active':'');
+    c.textContent=name;
+    c.onclick=()=>{S.rampName=name;S.colors=[...RAMPS[name]];renderColorStops();updateMap();w.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');};
+    w.appendChild(c);
+  });
+}
+
+function renderColorStops(){
+  const w=document.getElementById('color-stops'); w.innerHTML='';
+  S.colors.forEach((col,i)=>{
+    const r=document.createElement('div'); r.className='color-stop-row';
+    r.innerHTML=`<span class="stop-label">${i+1}</span><input type="color" value="${col}"><span style="font-family:'JetBrains Mono';font-size:11px;color:var(--text2);width:58px;">${col}</span>${S.colors.length>2?'<button class="btn-remove-stop">&#10005;</button>':''}`;
+    r.querySelector('input[type="color"]').addEventListener('input',e=>{S.colors[i]=e.target.value;renderColorStops();updateMap();});
+    const rm=r.querySelector('.btn-remove-stop'); if(rm) rm.addEventListener('click',()=>{S.colors.splice(i,1);renderColorStops();updateMap();});
+    w.appendChild(r);
+  });
+}
+
+// ═══════════════════════════════════════════
+// MAP INIT
+// ═══════════════════════════════════════════
+function initMap(){
+  map=new maplibregl.Map({container:'map',style:blankStyle(S.bgColor),center:[-98,39],zoom:4,preserveDrawingBuffer:true});
+  map.addControl(new maplibregl.NavigationControl(),'top-right');
+  map.on('load',async()=>{
+    addBasemapLayer();
+    await loadCountyBoundaries();
+    // Default: lower-48 view with insets
+    if(!S.fullExtent){
+      const src=map.getSource('county-data');
+      if(src) src.setData(filterConusGeo());
+      map.fitBounds([[-126,24],[-66,50]],{padding:20,duration:0});
+      document.getElementById('inset-container').classList.add('active');
+      setTimeout(createInsets,200);
+    }
+  });
+}
+
+// Add/swap raster tile basemap — always stays below data layers
+function addBasemapLayer(){
+  if(map.getLayer('basemap-tiles')) map.removeLayer('basemap-tiles');
+  if(map.getSource('basemap-tiles')) map.removeSource('basemap-tiles');
+  const url=BASEMAP_TILES[S.basemap];
+  if(!url) return; // "none" — just the background color
+  map.addSource('basemap-tiles',{type:'raster',tiles:[url],tileSize:256});
+  // Insert at position 1 (right above the background layer, below everything else)
+  const firstDataLayer=map.getLayer('county-fill')?'county-fill':undefined;
+  map.addLayer({id:'basemap-tiles',type:'raster',source:'basemap-tiles',paint:{'raster-opacity':1}},firstDataLayer);
+}
+
+async function loadCountyBoundaries(){
+  if(!topoData){
+    const r=await fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json');
+    topoData=await r.json();
+  }
+  geojsonData=topojsonToGeojson(topoData,'counties');
+  geojsonData.features.forEach(f=>{
+    const fips=String(f.id).padStart(5,'0'), d=countyData[fips];
+    f.properties=d?{...f.properties,...d,FIPS:fips}:{...f.properties,FIPS:fips};
+    if(analysisValues[fips]!=null) f.properties._av=analysisValues[fips];
+  });
+
+  map.addSource('county-data',{type:'geojson',data:geojsonData});
+  map.addLayer({id:'county-fill',type:'fill',source:'county-data',paint:{'fill-color':buildFill(),'fill-opacity':S.opacity}});
+  map.addLayer({id:'county-line',type:'line',source:'county-data',paint:{'line-color':S.strokeColor,'line-width':S.strokeWidth}});
+
+  const stateGeo=topojsonToGeojson(topoData,'states');
+  map.addSource('state-boundaries',{type:'geojson',data:stateGeo});
+  map.addLayer({id:'state-line',type:'line',source:'state-boundaries',paint:{'line-color':S.stateBorderColor,'line-width':S.stateBorderWidth},layout:{visibility:S.stateBorders?'visible':'none'}});
+
+  map.addSource('county-centroids',{type:'geojson',data:buildCentroidGeo()});
+  map.addLayer({id:'county-bubble',type:'circle',source:'county-centroids',paint:{'circle-radius':bubbleRadius(),'circle-color':buildFill(),'circle-opacity':.7,'circle-stroke-color':'#fff','circle-stroke-width':.3},layout:{visibility:'none'}});
+
+  map.on('click','county-fill',handlePopup);
+  map.on('click','county-bubble',handlePopup);
+  map.on('mouseenter','county-fill',onCursorEnter);
+  map.on('mouseleave','county-fill',onCursorLeave);
+  map.on('mouseenter','county-bubble',onCursorEnter);
+  map.on('mouseleave','county-bubble',onCursorLeave);
+
+  buildCentroidIndex();
+  mapReady=true;
+  document.getElementById('loading').style.display='none';
+  updateLegend();
+}
+
+// ═══════════════════════════════════════════
+// CENTROIDS + SPATIAL
+// ═══════════════════════════════════════════
+function buildCentroidIndex(){
+  centroidIndex=[];
+  geojsonData.features.forEach(f=>{const c=centroid(f.geometry);if(c)centroidIndex.push({fips:String(f.id).padStart(5,'0'),x:c[0],y:c[1]});});
+}
+function getKNN(fips,k=6){
+  if(neighborCache[fips]) return neighborCache[fips];
+  const me=centroidIndex.find(c=>c.fips===fips); if(!me) return [];
+  const d=centroidIndex.filter(c=>c.fips!==fips).map(c=>({fips:c.fips,d:(c.x-me.x)**2+(c.y-me.y)**2})).sort((a,b)=>a.d-b.d);
+  return neighborCache[fips]=d.slice(0,k).map(x=>x.fips);
+}
+function buildCentroidGeo(){
+  const fs=[]; if(!geojsonData) return {type:'FeatureCollection',features:fs};
+  geojsonData.features.forEach(f=>{if(!f.geometry||!f.geometry.coordinates) return;const c=centroid(f.geometry);if(c)fs.push({type:'Feature',properties:f.properties,geometry:{type:'Point',coordinates:c}});});
+  return {type:'FeatureCollection',features:fs};
+}
+function centroid(g){
+  let coords=[];
+  if(g.type==='Polygon') coords=g.coordinates[0];
+  else if(g.type==='MultiPolygon'){let mx=0;g.coordinates.forEach(p=>{if(p[0].length>mx){mx=p[0].length;coords=p[0];}});}
+  if(!coords.length) return null;
+  let sx=0,sy=0; coords.forEach(c=>{sx+=c[0];sy+=c[1];}); return[sx/coords.length,sy/coords.length];
+}
+function bubbleRadius(){
+  const v=getValues(); if(!v.length) return 5;
+  return['interpolate',['linear'],['to-number',['get',S.variable],0],v[0],3,v[v.length-1],20];
+}
+
+// ═══════════════════════════════════════════
+// TOPOJSON DECODE
+// ═══════════════════════════════════════════
+function topojsonToGeojson(t,name){
+  const obj=t.objects[name],arcs=t.arcs,tf=t.transform;
+  function da(ai){const arc=arcs[ai<0?~ai:ai],c=[];let x=0,y=0;for(const[dx,dy]of arc){x+=dx;y+=dy;c.push([x*tf.scale[0]+tf.translate[0],y*tf.scale[1]+tf.translate[1]]);}if(ai<0)c.reverse();return c;}
+  function dr(ring){let c=[];for(const ai of ring){const d=da(ai);c=c.concat(c.length?d.slice(1):d);}return c;}
+  function dg(g){if(g.type==='Polygon')return{type:'Polygon',coordinates:g.arcs.map(dr)};if(g.type==='MultiPolygon')return{type:'MultiPolygon',coordinates:g.arcs.map(p=>p.map(dr))};return g;}
+  return{type:'FeatureCollection',features:(obj.geometries||[]).map(g=>({type:'Feature',id:g.id,properties:g.properties||{},geometry:dg(g)}))};
+}
+
+// ═══════════════════════════════════════════
+// STATISTICS ENGINE
+// ═══════════════════════════════════════════
+function runOLS(yVar,xVar){
+  const pairs=allRecords.filter(r=>r[yVar]!=null&&r[xVar]!=null&&isFinite(r[yVar])&&isFinite(r[xVar])).map(r=>({fips:r.FIPS,y:r[yVar],x:r[xVar]}));
+  const n=pairs.length; if(n<3) return null;
+  let sx=0,sy=0,sxy=0,sx2=0;
+  pairs.forEach(p=>{sx+=p.x;sy+=p.y;sxy+=p.x*p.y;sx2+=p.x*p.x;});
+  const mx=sx/n,my=sy/n,b=(n*sxy-sx*sy)/(n*sx2-sx*sx),a=my-b*mx;
+  let ssRes=0,ssTot=0; const residuals={};
+  pairs.forEach(p=>{const res=p.y-(a+b*p.x);residuals[p.fips]=res;ssRes+=res*res;ssTot+=(p.y-my)**2;});
+  const r2=1-ssRes/ssTot, r=Math.sign(b)*Math.sqrt(Math.max(0,r2));
+  const mse=ssRes/(n-2),sxx=sx2-sx*sx/n,se=Math.sqrt(mse/sxx),tS=b/se;
+  const pVal=2*(1-normCDF(Math.abs(tS)));
+  const rv=Object.values(residuals),rm=rv.reduce((a,b)=>a+b,0)/rv.length,rs=Math.sqrt(rv.reduce((s,v)=>s+(v-rm)**2,0)/rv.length);
+  const stdR={}; for(const[f,v]of Object.entries(residuals)) stdR[f]=rs>0?(v-rm)/rs:0;
+  return{n,a,b,r2,r,se,tS,pVal,residuals,stdR,pairs,mx,my};
+}
+function normCDF(x){const t=1/(1+.2316419*Math.abs(x)),d=.3989422804*Math.exp(-x*x/2),p=d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p;}
+
+function runGiStar(varName,k=6){
+  const valid=allRecords.filter(r=>r[varName]!=null&&isFinite(r[varName]));
+  const n=valid.length; if(n<10) return {};
+  const vm={}; valid.forEach(r=>vm[r.FIPS]=r[varName]);
+  const vals=Object.values(vm),xm=vals.reduce((a,b)=>a+b,0)/n,s=Math.sqrt(vals.reduce((a,v)=>a+(v-xm)**2,0)/n);
+  if(s===0) return {};
+  const z={};
+  Object.keys(vm).forEach(fips=>{
+    const nb=getKNN(fips,k).filter(f=>vm[f]!=null);
+    const sumW=nb.length+1; let sumWX=vm[fips]; nb.forEach(f=>{sumWX+=vm[f];});
+    const num=sumWX-xm*sumW,den=s*Math.sqrt((n*sumW-sumW*sumW)/(n-1));
+    z[fips]=den>0?num/den:0;
+  });
+  return z;
+}
+
+function computeRateRatio(){
+  const vals={}; allRecords.forEach(r=>{
+    const a=r[S.variable],b=r[S.variableY];
+    if(a!=null&&b!=null&&isFinite(a)&&isFinite(b)&&b>0) vals[r.FIPS]=Math.log2(a/b);
+  });
+  return vals;
+}
+
+function computePctDiff(){
+  // Percentile rank each variable, then compute difference
+  const aVals=allRecords.filter(r=>r[S.variable]!=null&&isFinite(r[S.variable])).sort((a,b)=>a[S.variable]-b[S.variable]);
+  const bVals=allRecords.filter(r=>r[S.variableY]!=null&&isFinite(r[S.variableY])).sort((a,b)=>a[S.variableY]-b[S.variableY]);
+  const pctA={},pctB={};
+  aVals.forEach((r,i)=>pctA[r.FIPS]=(i/(aVals.length-1))*100);
+  bVals.forEach((r,i)=>pctB[r.FIPS]=(i/(bVals.length-1))*100);
+  const vals={};
+  allRecords.forEach(r=>{if(pctA[r.FIPS]!=null&&pctB[r.FIPS]!=null) vals[r.FIPS]=pctA[r.FIPS]-pctB[r.FIPS];});
+  return vals;
+}
+
+// ═══════════════════════════════════════════
+// CLASSIFICATION
+// ═══════════════════════════════════════════
+function getValues(v){return Object.values(countyData).map(d=>d[v||S.variable]).filter(v=>v!=null&&isFinite(v)).sort((a,b)=>a-b);}
+function computeBreaks(varName,nc){
+  const vals=getValues(varName),n=nc||S.nClasses; if(!vals.length) return [];
+  if(!varName&&S.method==='manual'&&S.manualBreaks.length) return S.manualBreaks.slice().sort((a,b)=>a-b);
+  if(!varName&&S.method==='equal'){const mn=vals[0],mx=vals[vals.length-1],step=(mx-mn)/n;return Array.from({length:n-1},(_,i)=>mn+step*(i+1));}
+  if(!varName&&S.method==='jenks') return jenksBreaks(vals,n);
+  return Array.from({length:n-1},(_,i)=>vals[Math.floor(((i+1)/n)*vals.length)]);
+}
+function jenksBreaks(data,nc){
+  const n=data.length; if(n<=nc) return data.slice(0,-1);
+  let s=data; if(n>1000){s=[];for(let i=0;i<1000;i++)s.push(data[Math.floor(i*n/1000)]);}
+  const sn=s.length,m1=Array.from({length:sn+1},()=>new Float64Array(nc+1).fill(Infinity)),m2=Array.from({length:sn+1},()=>new Int32Array(nc+1));
+  for(let i=1;i<=nc;i++)m1[1][i]=0;
+  for(let l=2;l<=sn;l++){let sm=0,sq=0;for(let m=1;m<=l;m++){sm+=s[l-m];sq+=s[l-m]**2;const v=sq-sm*sm/m;if(m>1)for(let j=2;j<=nc;j++){const t=m1[l-m][j-1]+v;if(t<m1[l][j]){m2[l][j]=l-m;m1[l][j]=t;}}};m1[l][1]=sq-sm*sm/l;}
+  const brk=[];let k=sn;for(let j=nc;j>=2;j--){brk.unshift(s[m2[k][j]]);k=m2[k][j];}return brk;
+}
+function interpColors(n){if(S.colors.length===n)return[...S.colors];const o=[];for(let i=0;i<n;i++){const t=n===1?0:i/(n-1),idx=t*(S.colors.length-1),lo=Math.floor(idx),hi=Math.min(lo+1,S.colors.length-1);o.push(lerp(S.colors[lo],S.colors[hi],idx-lo));}return o;}
+function lerp(a,b,t){const[r1,g1,b1]=hx(a),[r2,g2,b2]=hx(b);return xh(Math.round(r1+(r2-r1)*t),Math.round(g1+(g2-g1)*t),Math.round(b1+(b2-b1)*t));}
+function hx(h){const n=parseInt(h.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255];}
+function xh(r,g,b){return'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');}
+
+// ═══════════════════════════════════════════
+// FILL EXPRESSIONS
+// ═══════════════════════════════════════════
+function buildFill(){
+  const nd=S.noDataColor;
+  if(S.mode==='bivariate') return buildBivFill();
+  if(['residuals','rate_ratio','pct_diff'].includes(S.mode)) return buildDivergingFill();
+  if(S.mode==='hotspot') return buildHotspotFill();
+  // Choropleth / Bubble
+  const brk=computeBreaks(),nB=brk.length+1,cols=interpColors(nB);
+  const step=['step',['to-number',['get',S.variable],-9999],cols[0]];
+  brk.forEach((b,i)=>{step.push(b);step.push(cols[i+1]);});
+  return['case',['all',['has',S.variable],['!=',['get',S.variable],null],['!=',['typeof',['get',S.variable]],'string']],step,nd];
+}
+
+function buildBivFill(){
+  const nd=S.noDataColor,xB=computeBreaks(S.variable,3),yB=computeBreaks(S.variableY,3);
+  if(xB.length<2||yB.length<2) return nd;
+  const xP=['to-number',['get',S.variable],0],yP=['to-number',['get',S.variableY],0];
+  const xC=['case',['<',xP,xB[0]],0,['<',xP,xB[1]],1,2];
+  const yC=['case',['<',yP,yB[0]],0,['<',yP,yB[1]],1,2];
+  const idx=['+',['*',yC,3],xC];
+  return['case',['all',['has',S.variable],['!=',['get',S.variable],null],['has',S.variableY],['!=',['get',S.variableY],null]],
+    ['match',idx,0,BIV_COLORS[0][0],1,BIV_COLORS[0][1],2,BIV_COLORS[0][2],3,BIV_COLORS[1][0],4,BIV_COLORS[1][1],5,BIV_COLORS[1][2],6,BIV_COLORS[2][0],7,BIV_COLORS[2][1],8,BIV_COLORS[2][2],'#ccc'],nd];
+}
+
+function buildDivergingFill(){
+  const nd=S.noDataColor,p=['to-number',['get','_av'],-9999];
+  return['case',['==',p,-9999],nd,['<',p,-1.5],RC.neg2,['<',p,-0.5],RC.neg1,['<',p,0.5],RC.zero,['<',p,1.5],RC.pos1,RC.pos2];
+}
+
+function buildHotspotFill(){
+  const nd=S.noDataColor,p=['to-number',['get','_av'],-9999];
+  return['case',['==',p,-9999],nd,['<',p,-2.58],HC.cold3,['<',p,-1.96],HC.cold2,['<',p,-1.65],HC.cold1,['<',p,1.65],HC.ns,['<',p,1.96],HC.hot1,['<',p,2.58],HC.hot2,HC.hot3];
+}
+
+function injectAV(vals){
+  analysisValues=vals;
+  geojsonData.features.forEach(f=>{const fips=String(f.id).padStart(5,'0');f.properties._av=vals[fips]!=null?vals[fips]:null;});
+  const src=map.getSource('county-data'); if(src)src.setData(geojsonData);
+  const cs=map.getSource('county-centroids'); if(cs)cs.setData(buildCentroidGeo());
+}
+function clearAnalysisValues(){
+  analysisValues={};
+  if(!geojsonData) return;
+  geojsonData.features.forEach(f=>{delete f.properties._av;});
+  const src=map.getSource('county-data'); if(src)src.setData(geojsonData);
+}
+
+function runAnalysis(){
+  if(S.mode==='residuals'){
+    lastOLS=runOLS(S.variable,S.variableY);
+    if(lastOLS){injectAV(lastOLS.stdR);showStatsPanel(lastOLS);}
+  } else if(S.mode==='hotspot'){
+    injectAV(runGiStar(S.variable,6));
+    document.getElementById('stats-panel').style.display='none';
+  } else if(S.mode==='rate_ratio'){
+    const v=computeRateRatio();
+    // Standardize for the diverging fill
+    const vals=Object.values(v),m=vals.reduce((a,b)=>a+b,0)/vals.length,sd=Math.sqrt(vals.reduce((s,x)=>s+(x-m)**2,0)/vals.length);
+    const std={}; for(const[f,x]of Object.entries(v)) std[f]=sd>0?(x-m)/sd:0;
+    injectAV(std);
+    document.getElementById('stats-panel').style.display='none';
+  } else if(S.mode==='pct_diff'){
+    const v=computePctDiff();
+    const vals=Object.values(v),m=vals.reduce((a,b)=>a+b,0)/vals.length,sd=Math.sqrt(vals.reduce((s,x)=>s+(x-m)**2,0)/vals.length);
+    const std={}; for(const[f,x]of Object.entries(v)) std[f]=sd>0?(x-m)/sd:0;
+    injectAV(std);
+    document.getElementById('stats-panel').style.display='none';
+  } else {
+    clearAnalysisValues();
+    document.getElementById('stats-panel').style.display='none';
+  }
+}
+
+// ═══════════════════════════════════════════
+// STATS PANEL
+// ═══════════════════════════════════════════
+function showStatsPanel(o){
+  const p=document.getElementById('stats-panel'); p.style.display='block';
+  document.getElementById('chart-overlay').style.display='none';
+  document.getElementById('sp-title').textContent=`OLS: ${shortLabel(S.variable)} ~ ${shortLabel(S.variableY)}`;
+  const fmt=(v,d=4)=>v<.0001&&v>0?v.toExponential(2):v.toFixed(d);
+  document.getElementById('sp-grid').innerHTML=`
+    <div class="stats-cell"><div class="sv">${fmt(o.r2)}</div><div class="sl">R&sup2;</div></div>
+    <div class="stats-cell"><div class="sv">${fmt(o.r)}</div><div class="sl">Pearson r</div></div>
+    <div class="stats-cell"><div class="sv">${fmt(o.b)}</div><div class="sl">&beta; (slope)</div></div>
+    <div class="stats-cell"><div class="sv">${fmt(o.se)}</div><div class="sl">SE(&beta;)</div></div>
+    <div class="stats-cell"><div class="sv">${fmt(o.tS,2)}</div><div class="sl">t-stat</div></div>
+    <div class="stats-cell"><div class="sv">${o.pVal<.001?'< 0.001':fmt(o.pVal)}</div><div class="sl">p-value</div></div>
+    <div class="stats-cell"><div class="sv">${o.n.toLocaleString()}</div><div class="sl">n</div></div>
+    <div class="stats-cell"><div class="sv">${fmt(o.a,2)}</div><div class="sl">Intercept</div></div>`;
+  document.getElementById('sp-eq').textContent=`${shortLabel(S.variable)} = ${o.b>=0?'':'−'}${Math.abs(o.b).toFixed(4)} × ${shortLabel(S.variableY)} + ${o.a.toFixed(2)}`;
+  drawStatsScatter(o);
+}
+
+function drawStatsScatter(o){
+  const cv=document.getElementById('stats-scatter'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H); const pts=o.pairs; if(!pts.length) return;
+  const xV=pts.map(p=>p.x),yV=pts.map(p=>p.y);
+  const xn=Math.min(...xV),xx=Math.max(...xV),yn=Math.min(...yV),yx=Math.max(...yV);
+  const pad={l:42,r:8,t:8,b:24},pW=W-pad.l-pad.r,pH=H-pad.t-pad.b;
+  const tx=v=>pad.l+((v-xn)/(xx-xn||1))*pW,ty=v=>pad.t+pH-((v-yn)/(yx-yn||1))*pH;
+  pts.forEach(p=>{
+    const sr=o.stdR[p.fips]||0;
+    let c=RC.zero; if(sr<-1.5)c=RC.neg2;else if(sr<-0.5)c=RC.neg1;else if(sr>1.5)c=RC.pos2;else if(sr>0.5)c=RC.pos1;
+    ctx.globalAlpha=.4;ctx.fillStyle=c;ctx.beginPath();ctx.arc(tx(p.x),ty(p.y),2.5,0,Math.PI*2);ctx.fill();
+  });
+  ctx.globalAlpha=1;ctx.strokeStyle='#f0883e';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(tx(xn),ty(o.a+o.b*xn));ctx.lineTo(tx(xx),ty(o.a+o.b*xx));ctx.stroke();
+  ctx.strokeStyle='#8b949e';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+pH);ctx.lineTo(pad.l+pW,pad.t+pH);ctx.stroke();
+  ctx.fillStyle='#8b949e';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+  const fa=v=>v>=10000?Math.round(v/1000)+'k':v.toFixed(0);
+  for(let i=0;i<=4;i++)ctx.fillText(fa(xn+(xx-xn)*i/4),pad.l+pW*i/4,pad.t+pH+13);
+  ctx.textAlign='right';for(let i=0;i<=3;i++)ctx.fillText(fa(yn+(yx-yn)*i/3),pad.l-3,pad.t+pH-pH*i/3+3);
+}
+
+// ═══════════════════════════════════════════
+// UPDATE MAP
+// ═══════════════════════════════════════════
+function updateMap(){
+  if(!mapReady) return;
+  const isAnalysis=['residuals','hotspot','rate_ratio','pct_diff'].includes(S.mode);
+  if(isAnalysis) runAnalysis(); else{clearAnalysisValues();document.getElementById('stats-panel').style.display='none';}
+
+  const fill=buildFill();
+  map.setPaintProperty('county-fill','fill-color',fill);
+  map.setPaintProperty('county-fill','fill-opacity',S.opacity);
+  map.setPaintProperty('county-line','line-color',S.strokeColor);
+  map.setPaintProperty('county-line','line-width',S.strokeWidth);
+  map.setPaintProperty('county-bubble','circle-color',fill);
+  map.setPaintProperty('county-bubble','circle-radius',bubbleRadius());
+  map.setLayoutProperty('county-fill','visibility',S.mode!=='bubble'?'visible':'none');
+  map.setLayoutProperty('county-bubble','visibility',S.mode==='bubble'?'visible':'none');
+  updateLegend(); updateStats(); updateInsets();
+}
+
+function updateStats(){
+  const v=getValues(); if(!v.length) return;
+  const mean=v.reduce((a,b)=>a+b,0)/v.length,sorted=[...v].sort((a,b)=>a-b),med=sorted[Math.floor(sorted.length/2)];
+  const sd=Math.sqrt(v.reduce((s,x)=>s+(x-mean)**2,0)/v.length);
+  const f=x=>x>=10000?Math.round(x).toLocaleString():x.toFixed(1);
+  document.getElementById('stat-mean').textContent=f(mean);
+  document.getElementById('stat-median').textContent=f(med);
+  document.getElementById('stat-sd').textContent=f(sd);
+}
+
+// ═══════════════════════════════════════════
+// LEGEND
+// ═══════════════════════════════════════════
+function applyLegendStyle(el){
+  el.style.background=S.legendBg;
+  el.style.color=S.legendTextColor;
+  el.style.width=S.legendWidth+'px';
+  el.style.fontSize=S.legendFontSize+'px';
+  // Also update child elements that have hardcoded colors
+  el.querySelectorAll('.legend-nodata,.biv-axis-label,.biv-y-label,.analysis-legend-item').forEach(c=>c.style.color=S.legendTextColor);
+  el.querySelectorAll('.legend-nodata').forEach(c=>c.style.borderTopColor=S.legendTextColor+'33');
+}
+
+function updateMapTitle(){
+  const el=document.getElementById('map-title');
+  const main=document.getElementById('mt-main');
+  const sub=document.getElementById('mt-sub');
+  if(!S.mapTitle&&!S.mapSubtitle){el.style.display='none';return;}
+  el.style.display='block';
+  main.textContent=S.mapTitle;
+  main.style.fontSize=S.mapTitleSize+'px';
+  main.style.color=S.mapTitleColor;
+  sub.textContent=S.mapSubtitle;
+  sub.style.fontSize=S.mapSubtitleSize+'px';
+  sub.style.color=S.mapTitleColor+'bb'; // slightly transparent for subtitle
+  sub.style.display=S.mapSubtitle?'block':'none';
+}
+
+function updateLegend(){
+  const uL=document.getElementById('legend'),bL=document.getElementById('bivariate-legend'),aL=document.getElementById('analysis-legend');
+  uL.style.display='none';bL.style.display='none';aL.style.display='none';
+  document.querySelectorAll('.legend-nodata-swatch').forEach(s=>s.style.background=S.noDataColor);
+
+  const customTitle=S.legendTitle.trim();
+
+  if(S.mode==='bivariate'){
+    bL.style.display='block'; applyLegendStyle(bL);
+    const g=document.getElementById('biv-grid');g.innerHTML='';
+    for(let y=2;y>=0;y--)for(let x=0;x<3;x++){const d=document.createElement('div');d.style.background=BIV_COLORS[y][x];g.appendChild(d);}
+    document.getElementById('biv-x-label').textContent=customTitle||shortLabel(S.variable);
+    document.getElementById('biv-y-label').textContent=shortLabel(S.variableY);
+  } else if(S.mode==='residuals'||S.mode==='rate_ratio'||S.mode==='pct_diff'){
+    aL.style.display='block'; applyLegendStyle(aL);
+    const titles={residuals:'Std. Residuals (Y ~ X)',rate_ratio:'Rate Ratio (log₂, std)',pct_diff:'Percentile Diff (std)'};
+    document.getElementById('al-title').textContent=customTitle||titles[S.mode]||'Analysis';
+    document.getElementById('al-items').innerHTML=[
+      [RC.pos2,'> +1.5 SD (much higher)'],[RC.pos1,'+0.5 to +1.5 SD'],[RC.zero,'±0.5 SD (typical)'],
+      [RC.neg1,'-1.5 to -0.5 SD'],[RC.neg2,'< -1.5 SD (much lower)'],
+    ].map(([c,l])=>`<div class="analysis-legend-item"><div class="analysis-legend-swatch" style="background:${c}"></div>${l}</div>`).join('');
+  } else if(S.mode==='hotspot'){
+    aL.style.display='block'; applyLegendStyle(aL);
+    document.getElementById('al-title').textContent=customTitle||'Hot/Cold Spots (Gi* z-score)';
+    document.getElementById('al-items').innerHTML=[
+      [HC.hot3,'Hot (p<0.01)'],[HC.hot2,'Hot (p<0.05)'],[HC.hot1,'Hot (p<0.10)'],[HC.ns,'Not significant'],
+      [HC.cold1,'Cold (p<0.10)'],[HC.cold2,'Cold (p<0.05)'],[HC.cold3,'Cold (p<0.01)'],
+    ].map(([c,l])=>`<div class="analysis-legend-item"><div class="analysis-legend-swatch" style="background:${c}"></div>${l}</div>`).join('');
+  } else {
+    uL.style.display='block'; applyLegendStyle(uL);
+    const brk=computeBreaks(),cols=interpColors(brk.length+1);
+    document.getElementById('legend-title').textContent=customTitle||VL[S.variable]||S.variable;
+    document.getElementById('legend-bar').style.background=`linear-gradient(to right,${cols.join(',')})`;
+    const v=getValues(),f=x=>x>=10000?Math.round(x).toLocaleString():x.toFixed(1);
+    document.getElementById('leg-min').textContent=v.length?f(v[0]):'';
+    document.getElementById('leg-max').textContent=v.length?f(v[v.length-1]):'';
+  }
+}
+
+// ═══════════════════════════════════════════
+// POPUP
+// ═══════════════════════════════════════════
+function onCursorEnter(){map.getCanvas().style.cursor='pointer';}
+function onCursorLeave(){map.getCanvas().style.cursor='';}
+function handlePopup(e){
+  const p=e.features[0].properties; if(!p.County_Name||p.County_Name==='null') return;
+  const f=v=>(v!=null&&v!==''&&v!=='null')?Number(v).toLocaleString(undefined,{maximumFractionDigits:1}):'—';
+  const fd=v=>(v!=null&&v!==''&&v!=='null')?'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0}):'—';
+  let extra='';
+  if(p._av!=null&&p._av!=='null'){
+    const av=Number(p._av),labels={residuals:'Std. Residual',hotspot:'Gi* z-score',rate_ratio:'Rate Ratio (std)',pct_diff:'Pct Diff (std)'};
+    extra=`<div class="popup-section-title">Analysis</div><div class="popup-row"><span class="popup-label">${labels[S.mode]||'Value'}</span><span class="popup-val">${av.toFixed(3)}</span></div>`;
+  }
+  new maplibregl.Popup({closeButton:true,maxWidth:'280px'}).setLngLat(e.lngLat).setHTML(`
+    <div class="popup-title">${p.County_Name||p.FIPS}</div>
+    <div class="popup-section-title">Mortality</div>
+    <div class="popup-row"><span class="popup-label">HD Death Rate</span><span class="popup-val">${f(p.HD_DeathRate)}</span></div>
+    <div class="popup-row"><span class="popup-label">Life Expectancy</span><span class="popup-val">${f(p.Life_Expectancy)} yr</span></div>
+    <div class="popup-section-title">Clinical Care</div>
+    <div class="popup-row"><span class="popup-label">Dentists/100K</span><span class="popup-val">${f(p.Dentists_per_100K)}</span></div>
+    <div class="popup-row"><span class="popup-label">Uninsured</span><span class="popup-val">${f(p.Uninsured_pct)}%</span></div>
+    <div class="popup-section-title">Socioeconomic</div>
+    <div class="popup-row"><span class="popup-label">Median Income</span><span class="popup-val">${fd(p.Median_HH_Income)}</span></div>
+    <div class="popup-row"><span class="popup-label">Population</span><span class="popup-val">${f(p.Population)}</span></div>${extra}
+  `).addTo(map);
+}
+
+// ═══════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════
+function drawHistogram(){
+  document.getElementById('stats-panel').style.display='none';
+  const ov=document.getElementById('chart-overlay');ov.style.display='block';
+  document.getElementById('chart-title').textContent='Distribution: '+(VL[S.variable]||S.variable);
+  const cv=document.getElementById('chart-canvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H); const vals=getValues(); if(!vals.length) return;
+  const nB=40,mn=vals[0],mx=vals[vals.length-1],bW=(mx-mn)/nB||1;
+  const bins=new Array(nB).fill(0); vals.forEach(v=>{bins[Math.min(Math.floor((v-mn)/bW),nB-1)]++;});
+  const mxC=Math.max(...bins),pad={l:40,r:10,t:10,b:26},pW=W-pad.l-pad.r,pH=H-pad.t-pad.b,barW=pW/nB;
+  const brk=computeBreaks(),cols=interpColors(brk.length+1);
+  bins.forEach((c,i)=>{const bH=(c/mxC)*pH,x=pad.l+i*barW,y=pad.t+pH-bH,bv=mn+(i+.5)*bW;let ci=0;for(let b=0;b<brk.length;b++)if(bv>=brk[b])ci=b+1;ctx.fillStyle=cols[Math.min(ci,cols.length-1)]||'#58a6ff';ctx.fillRect(x,y,barW-1,bH);});
+  ctx.strokeStyle='#8b949e';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+pH);ctx.lineTo(pad.l+pW,pad.t+pH);ctx.stroke();
+  ctx.fillStyle='#8b949e';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+  const fa=v=>v>=10000?Math.round(v/1000)+'k':v.toFixed(0);
+  for(let i=0;i<=4;i++)ctx.fillText(fa(mn+(mx-mn)*i/4),pad.l+pW*i/4,pad.t+pH+14);
+  ctx.textAlign='right';for(let i=0;i<=3;i++)ctx.fillText(Math.round(mxC*i/3),pad.l-4,pad.t+pH-pH*i/3+4);
+}
+
+function drawScatter(){
+  // If secondary is on, use it. Otherwise, auto-enable it.
+  if(!S.secondaryOn){
+    S.secondaryOn=true; document.getElementById('secondary-toggle').checked=true;
+    document.getElementById('secondary-wrap').classList.remove('hidden');
+    renderModeTabs();
+  }
+  document.getElementById('stats-panel').style.display='none';
+  const ov=document.getElementById('chart-overlay');ov.style.display='block';
+  const xVar=S.variable,yVar=S.variableY;
+  document.getElementById('chart-title').textContent=shortLabel(xVar)+' vs '+shortLabel(yVar);
+  const cv=document.getElementById('chart-canvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  const pts=allRecords.filter(r=>r[xVar]!=null&&r[yVar]!=null&&isFinite(r[xVar])&&isFinite(r[yVar])).map(r=>[r[xVar],r[yVar]]);
+  if(!pts.length) return;
+  const xV=pts.map(p=>p[0]),yV=pts.map(p=>p[1]);
+  const xn=Math.min(...xV),xx=Math.max(...xV),yn=Math.min(...yV),yx=Math.max(...yV);
+  const pad={l:45,r:10,t:10,b:26},pW=W-pad.l-pad.r,pH=H-pad.t-pad.b;
+  const tx=v=>pad.l+((v-xn)/(xx-xn||1))*pW,ty=v=>pad.t+pH-((v-yn)/(yx-yn||1))*pH;
+  ctx.globalAlpha=.25;ctx.fillStyle='#58a6ff';
+  pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(tx(x),ty(y),2,0,Math.PI*2);ctx.fill();});
+  ctx.globalAlpha=1;
+  const n=pts.length,sX=xV.reduce((a,b)=>a+b,0),sY=yV.reduce((a,b)=>a+b,0),sXY=pts.reduce((a,p)=>a+p[0]*p[1],0),sX2=xV.reduce((a,b)=>a+b*b,0);
+  const slope=(n*sXY-sX*sY)/(n*sX2-sX*sX),int=(sY-slope*sX)/n;
+  const mY=sY/n,ssTot=yV.reduce((a,y)=>a+(y-mY)**2,0),ssRes=pts.reduce((a,p)=>a+(p[1]-(slope*p[0]+int))**2,0),r2=1-ssRes/ssTot;
+  ctx.strokeStyle='#f0883e';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(tx(xn),ty(slope*xn+int));ctx.lineTo(tx(xx),ty(slope*xx+int));ctx.stroke();
+  ctx.fillStyle='#f0883e';ctx.font='11px JetBrains Mono';ctx.textAlign='left';
+  ctx.fillText(`R\u00b2 = ${r2.toFixed(3)}`,pad.l+8,pad.t+14);ctx.fillText(`\u03b2 = ${slope.toFixed(3)}`,pad.l+8,pad.t+28);
+  ctx.strokeStyle='#8b949e';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+pH);ctx.lineTo(pad.l+pW,pad.t+pH);ctx.stroke();
+  ctx.fillStyle='#8b949e';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+  const fa=v=>v>=10000?Math.round(v/1000)+'k':v.toFixed(0);
+  for(let i=0;i<=4;i++)ctx.fillText(fa(xn+(xx-xn)*i/4),pad.l+pW*i/4,pad.t+pH+14);
+  ctx.textAlign='right';for(let i=0;i<=3;i++)ctx.fillText(fa(yn+(yx-yn)*i/3),pad.l-3,pad.t+pH-pH*i/3+3);
+}
+
+// ═══════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════
+function setupSearch(){
+  const inp=document.getElementById('county-search'),res=document.getElementById('search-results');
+  inp.addEventListener('input',()=>{
+    const q=inp.value.toLowerCase().trim();res.innerHTML=''; if(q.length<2)return;
+    allRecords.filter(r=>r.County_Name&&r.County_Name.toLowerCase().includes(q)).slice(0,12).forEach(r=>{
+      const d=document.createElement('div');d.className='search-item';d.textContent=r.County_Name;
+      d.onclick=()=>{flyTo(r.FIPS);res.innerHTML='';inp.value=r.County_Name;};res.appendChild(d);
+    });
+  });
+}
+function flyTo(fips){
+  if(!geojsonData) return;
+  const f=geojsonData.features.find(f=>String(f.id).padStart(5,'0')===fips);
+  if(f){const c=centroid(f.geometry);if(c)map.flyTo({center:c,zoom:8,duration:1500});}
+}
+
+// ═══════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════
+function bindControls(){
+  // Secondary toggle
+  document.getElementById('secondary-toggle').onchange=e=>{
+    S.secondaryOn=e.target.checked;
+    document.getElementById('secondary-wrap').classList.toggle('hidden',!S.secondaryOn);
+    renderModeTabs(); updateMap();
+  };
+
+  document.getElementById('sel-variable').onchange=e=>{S.variable=e.target.value;updateMap();};
+  document.getElementById('sel-variable-y').onchange=e=>{S.variableY=e.target.value;updateMap();};
+  document.getElementById('sel-method').onchange=e=>{S.method=e.target.value;document.getElementById('manual-breaks-wrap').classList.toggle('hidden',S.method!=='manual');updateMap();};
+  document.getElementById('num-classes').onchange=e=>{S.nClasses=parseInt(e.target.value)||6;updateMap();};
+  document.getElementById('manual-breaks').onchange=e=>{S.manualBreaks=e.target.value.split(',').map(s=>parseFloat(s.trim())).filter(isFinite);updateMap();};
+  document.getElementById('opacity-slider').oninput=e=>{S.opacity=parseFloat(e.target.value);document.getElementById('opacity-val').textContent=S.opacity.toFixed(2);updateMap();};
+  document.getElementById('stroke-color').oninput=e=>{S.strokeColor=e.target.value;updateMap();};
+  document.getElementById('stroke-width').onchange=e=>{S.strokeWidth=parseFloat(e.target.value)||0.4;updateMap();};
+  document.getElementById('nodata-color').oninput=e=>{S.noDataColor=e.target.value;updateMap();};
+  document.getElementById('state-borders-toggle').onchange=e=>{
+    S.stateBorders=e.target.checked;
+    document.getElementById('state-border-opts').classList.toggle('hidden',!S.stateBorders);
+    if(mapReady) map.setLayoutProperty('state-line','visibility',S.stateBorders?'visible':'none');
+  };
+  document.getElementById('state-stroke-color').oninput=e=>{S.stateBorderColor=e.target.value;if(mapReady)map.setPaintProperty('state-line','line-color',S.stateBorderColor);};
+  document.getElementById('state-stroke-width').onchange=e=>{S.stateBorderWidth=parseFloat(e.target.value)||1;if(mapReady)map.setPaintProperty('state-line','line-width',S.stateBorderWidth);};
+  document.getElementById('btn-add-stop').onclick=()=>{S.colors.push(S.colors[S.colors.length-1]||'#fff');renderColorStops();updateMap();};
+  document.getElementById('btn-reverse').onclick=()=>{S.colors.reverse();renderColorStops();updateMap();};
+  document.getElementById('sel-basemap').onchange=e=>{S.basemap=e.target.value;applyBasemapChange();};
+  document.getElementById('bg-color').oninput=e=>{
+    S.bgColor=e.target.value;document.documentElement.style.setProperty('--pub-bg',S.bgColor);
+    map.setPaintProperty('background','background-color',S.bgColor);
+  };
+  document.getElementById('pub-toggle').onchange=e=>{applyExtentMode();};
+
+  // Inset controls
+  const rebuildInsets=()=>{if(!S.fullExtent){destroyInsets();setTimeout(createInsets,50);}};
+  document.getElementById('ak-w').onchange=e=>{S.akW=parseInt(e.target.value)||380;rebuildInsets();};
+  document.getElementById('ak-h').onchange=e=>{S.akH=parseInt(e.target.value)||300;rebuildInsets();};
+  document.getElementById('ak-zoom').onchange=e=>{S.akZoom=parseFloat(e.target.value)||2.4;rebuildInsets();};
+  document.getElementById('hi-w').onchange=e=>{S.hiW=parseInt(e.target.value)||210;rebuildInsets();};
+  document.getElementById('hi-h').onchange=e=>{S.hiH=parseInt(e.target.value)||160;rebuildInsets();};
+  document.getElementById('hi-zoom').onchange=e=>{S.hiZoom=parseFloat(e.target.value)||4.5;rebuildInsets();};
+  document.getElementById('inset-border-color').oninput=e=>{S.insetBorder=e.target.value;applyInsetSizes();};
+  document.getElementById('inset-border-width').onchange=e=>{S.insetBorderWidth=parseFloat(e.target.value)||2;applyInsetSizes();};
+  document.getElementById('inset-bg').oninput=e=>{S.insetBg=e.target.value;applyInsetSizes();
+    // Also update the inset map background layers
+    [insetAk,insetHi].forEach(m=>{if(m)try{m.setPaintProperty('background','background-color',S.insetShowBg?S.insetBg:'rgba(0,0,0,0)');}catch(_){}});
+  };
+  document.getElementById('inset-border-toggle').onchange=e=>{
+    S.insetShowBorder=e.target.checked;
+    document.getElementById('inset-border-opts').classList.toggle('hidden',!S.insetShowBorder);
+    applyInsetSizes();
+  };
+  document.getElementById('inset-bg-toggle').onchange=e=>{
+    S.insetShowBg=e.target.checked;
+    document.getElementById('inset-bg-opts').classList.toggle('hidden',!S.insetShowBg);
+    applyInsetSizes();
+    // Update map background layer to transparent or colored
+    const bg=S.insetShowBg?S.insetBg:'rgba(0,0,0,0)';
+    [insetAk,insetHi].forEach(m=>{if(m)try{m.setPaintProperty('background','background-color',bg);}catch(_){}});
+  };
+
+  // Legend controls
+  // Map title
+  document.getElementById('map-title-input').oninput=e=>{S.mapTitle=e.target.value;updateMapTitle();};
+  document.getElementById('map-subtitle-input').oninput=e=>{S.mapSubtitle=e.target.value;updateMapTitle();};
+  document.getElementById('map-title-size').onchange=e=>{S.mapTitleSize=parseInt(e.target.value)||20;updateMapTitle();};
+  document.getElementById('map-subtitle-size').onchange=e=>{S.mapSubtitleSize=parseInt(e.target.value)||14;updateMapTitle();};
+  document.getElementById('map-title-color').oninput=e=>{S.mapTitleColor=e.target.value;updateMapTitle();};
+  // Legend
+  document.getElementById('legend-title-input').oninput=e=>{S.legendTitle=e.target.value;updateLegend();};
+  document.getElementById('legend-bg').oninput=e=>{S.legendBg=e.target.value;updateLegend();};
+  document.getElementById('legend-text-color').oninput=e=>{S.legendTextColor=e.target.value;updateLegend();};
+  document.getElementById('legend-fontsize').onchange=e=>{S.legendFontSize=parseInt(e.target.value)||11;updateLegend();};
+  document.getElementById('legend-width').onchange=e=>{S.legendWidth=parseInt(e.target.value)||220;updateLegend();};
+
+  document.getElementById('sp-close').onclick=()=>{document.getElementById('stats-panel').style.display='none';};
+  document.getElementById('btn-export').onclick=exportPng;
+  document.getElementById('btn-histogram').onclick=drawHistogram;
+  document.getElementById('btn-scatter').onclick=drawScatter;
+  document.getElementById('chart-close').onclick=()=>{document.getElementById('chart-overlay').style.display='none';};
+  setupSearch();
+}
+
+// ═══════════════════════════════════════════
+// BASEMAP CHANGE — just swap the raster tile layer, nothing else changes
+// ═══════════════════════════════════════════
+function applyBasemapChange(){
+  addBasemapLayer();
+}
+
+// ═══════════════════════════════════════════
+// PUBLICATION MODE (Lower-48 + AK/HI insets)
+// ═══════════════════════════════════════════
+let insetAk=null, insetHi=null, prevView=null;
+
+function filterConusGeo(){
+  // Remove AK (02) and HI (15) from the main map source
+  return{type:'FeatureCollection',features:geojsonData.features.filter(f=>{
+    const fips=String(f.id).padStart(5,'0');
+    return !fips.startsWith('02')&&!fips.startsWith('15');
+  })};
+}
+
+function filterStateGeo(pfx){
+  return{type:'FeatureCollection',features:geojsonData.features.filter(f=>String(f.id).padStart(5,'0').startsWith(pfx))};
+}
+
+// fullExtent=false (default) = lower-48 clipped + AK/HI insets
+// fullExtent=true (toggle on) = all states on main map, no insets
+function applyExtentMode(){
+  S.fullExtent=document.getElementById('pub-toggle').checked;
+  const ctr=document.getElementById('inset-container');
+  document.getElementById('pub-opts').classList.toggle('hidden',S.fullExtent);
+  if(S.fullExtent){
+    // Show all states, remove insets
+    destroyInsets();
+    ctr.classList.remove('active');
+    const src=map.getSource('county-data');
+    if(src) src.setData(geojsonData);
+    map.flyTo({center:[-98.5,39.5],zoom:3.5,duration:600});
+  } else {
+    // Clip to CONUS, show insets
+    const src=map.getSource('county-data');
+    if(src) src.setData(filterConusGeo());
+    map.fitBounds([[-126,24],[-66,50]],{padding:20,duration:600});
+    ctr.classList.add('active');
+    applyInsetSizes();
+    setTimeout(createInsets,200);
+  }
+}
+
+function destroyInsets(){
+  if(insetAk){insetAk.remove();insetAk=null;}
+  if(insetHi){insetHi.remove();insetHi=null;}
+}
+
+function applyInsetSizes(){
+  const akBox=document.getElementById('inset-ak-box');
+  const hiBox=document.getElementById('inset-hi-box');
+  akBox.style.width=S.akW+'px'; akBox.style.height=S.akH+'px';
+  hiBox.style.width=S.hiW+'px'; hiBox.style.height=S.hiH+'px';
+  [akBox,hiBox].forEach(b=>{
+    if(S.insetShowBorder){
+      b.style.border=S.insetBorderWidth+'px solid '+S.insetBorder;
+    } else {
+      b.style.border='none';
+    }
+    b.style.background=S.insetShowBg?S.insetBg:'transparent';
+    b.style.borderRadius=S.insetShowBorder?'4px':'0';
+  });
+  // If maps exist, resize them
+  if(insetAk) setTimeout(()=>insetAk.resize(),10);
+  if(insetHi) setTimeout(()=>insetHi.resize(),10);
+}
+
+function createInsets(){
+  if(!geojsonData||!topoData) return;
+  destroyInsets();
+  applyInsetSizes();
+  const stateGeo=topojsonToGeojson(topoData,'states');
+  const addLayers=(m,countyGeo,pfx)=>{
+    m.addSource(pfx,{type:'geojson',data:countyGeo});
+    m.addLayer({id:pfx+'-f',type:'fill',source:pfx,paint:{'fill-color':buildFill(),'fill-opacity':S.opacity}});
+    m.addLayer({id:pfx+'-l',type:'line',source:pfx,paint:{'line-color':S.strokeColor,'line-width':S.strokeWidth}});
+    // State boundaries on insets
+    m.addSource(pfx+'-states',{type:'geojson',data:stateGeo});
+    m.addLayer({id:pfx+'-sl',type:'line',source:pfx+'-states',
+      paint:{'line-color':S.stateBorderColor,'line-width':S.stateBorderWidth},
+      layout:{visibility:S.stateBorders?'visible':'none'}});
+  };
+  const mapBg=S.insetShowBg?S.insetBg:'rgba(0,0,0,0)';
+  insetAk=new maplibregl.Map({container:'inset-ak',style:blankStyle(mapBg),center:S.akCenter,zoom:S.akZoom,interactive:true,preserveDrawingBuffer:true,attributionControl:false});
+  insetAk.on('load',()=>addLayers(insetAk,filterStateGeo('02'),'ak'));
+  insetHi=new maplibregl.Map({container:'inset-hi',style:blankStyle(mapBg),center:S.hiCenter,zoom:S.hiZoom,interactive:true,preserveDrawingBuffer:true,attributionControl:false});
+  insetHi.on('load',()=>addLayers(insetHi,filterStateGeo('15'),'hi'));
+  makeDraggable('inset-ak-box','drag-ak');
+  makeDraggable('inset-hi-box','drag-hi');
+}
+
+// ═══════════════════════════════════════════
+// DRAG-TO-MOVE INSET BOXES
+// ═══════════════════════════════════════════
+function makeDraggable(boxId,handleId){
+  const box=document.getElementById(boxId);
+  const handle=document.getElementById(handleId);
+  let dragging=false, startX, startY, startLeft, startTop;
+
+  handle.addEventListener('mousedown',e=>{
+    e.preventDefault(); e.stopPropagation();
+    dragging=true;
+    const rect=box.getBoundingClientRect();
+    const parent=box.parentElement.getBoundingClientRect();
+    startX=e.clientX; startY=e.clientY;
+    startLeft=rect.left-parent.left; startTop=rect.top-parent.top;
+    // Switch from bottom/left positioning to top/left for free dragging
+    box.style.bottom='auto';
+    box.style.left=startLeft+'px';
+    box.style.top=startTop+'px';
+  });
+
+  document.addEventListener('mousemove',e=>{
+    if(!dragging) return;
+    e.preventDefault();
+    const dx=e.clientX-startX, dy=e.clientY-startY;
+    box.style.left=(startLeft+dx)+'px';
+    box.style.top=(startTop+dy)+'px';
+  });
+
+  document.addEventListener('mouseup',()=>{dragging=false;});
+}
+
+function updateInsets(){
+  if(S.fullExtent) return;
+  const fill=buildFill();
+  [{m:insetAk,p:'ak',fips:'02'},{m:insetHi,p:'hi',fips:'15'}].forEach(({m,p,fips})=>{
+    if(!m)return;
+    try{
+      // Update data source so analysis values (_av) propagate
+      const src=m.getSource(p);
+      if(src) src.setData(filterStateGeo(fips));
+      // County fill & borders
+      m.setPaintProperty(p+'-f','fill-color',fill);
+      m.setPaintProperty(p+'-f','fill-opacity',S.opacity);
+      m.setPaintProperty(p+'-l','line-color',S.strokeColor);
+      m.setPaintProperty(p+'-l','line-width',S.strokeWidth);
+      // State boundaries
+      m.setLayoutProperty(p+'-sl','visibility',S.stateBorders?'visible':'none');
+      m.setPaintProperty(p+'-sl','line-color',S.stateBorderColor);
+      m.setPaintProperty(p+'-sl','line-width',S.stateBorderWidth);
+    }catch(_){}
+  });
+}
+
+// ═══════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════
+function drawTitleOnCanvas(ctx,W,dpr){
+  if(!S.mapTitle&&!S.mapSubtitle) return;
+  ctx.textAlign='center';
+  if(S.mapTitle){
+    ctx.fillStyle=S.mapTitleColor;
+    ctx.font=`700 ${S.mapTitleSize*dpr}px DM Sans,sans-serif`;
+    ctx.fillText(S.mapTitle, W/2, S.mapTitleSize*dpr+12*dpr);
+  }
+  if(S.mapSubtitle){
+    ctx.fillStyle=S.mapTitleColor+'bb';
+    ctx.font=`400 ${S.mapSubtitleSize*dpr}px DM Sans,sans-serif`;
+    ctx.fillText(S.mapSubtitle, W/2, (S.mapTitleSize+S.mapSubtitleSize+4)*dpr+12*dpr);
+  }
+}
+
+function exportPng(){
+  const mc=map.getCanvas(), dpr=window.devicePixelRatio||1;
+  const comp=document.createElement('canvas');comp.width=mc.width;comp.height=mc.height;
+  const ctx=comp.getContext('2d');ctx.drawImage(mc,0,0);
+
+  // Draw insets if in lower-48 mode
+  if(!S.fullExtent&&insetAk&&insetHi){
+    const mr=document.getElementById('map').getBoundingClientRect();
+    [{m:insetAk,box:'inset-ak-box',lbl:'Alaska'},{m:insetHi,box:'inset-hi-box',lbl:'Hawaii'}].forEach(({m,box,lbl})=>{
+      const c=m.getCanvas(),r=document.getElementById(box).getBoundingClientRect();
+      const x=(r.left-mr.left)*dpr,y=(r.top-mr.top)*dpr,w=r.width*dpr,h=r.height*dpr;
+      if(S.insetShowBg){ctx.fillStyle=S.insetBg;ctx.fillRect(x,y,w,h);}
+      ctx.drawImage(c,x,y,w,h);
+      if(S.insetShowBorder){ctx.strokeStyle=S.insetBorder;ctx.lineWidth=S.insetBorderWidth*dpr;ctx.strokeRect(x,y,w,h);}
+      ctx.fillStyle='#333';ctx.font=`700 ${11*dpr}px DM Sans,sans-serif`;ctx.textAlign='left';ctx.fillText(lbl,x+6*dpr,y+h-4*dpr);
+    });
+  }
+
+  // Draw title
+  drawTitleOnCanvas(ctx,comp.width,dpr);
+
+  const link=document.createElement('a');
+  link.download=`county_map_${S.mapTitle?S.mapTitle.replace(/\s+/g,'_').substring(0,30):S.variable}.png`;
+  link.href=comp.toDataURL('image/png');link.click();
+}
+
+// ═══════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
